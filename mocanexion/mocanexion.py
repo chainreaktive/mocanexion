@@ -4,7 +4,7 @@ import xml.etree.ElementTree as et
 
 class MocaNexion ():
     """
-    A class to connect to MOCA
+    A class to connect to MOCA.
     """
 
     def __init__(self):
