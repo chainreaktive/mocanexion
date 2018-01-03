@@ -1,8 +1,9 @@
 import pandas as pd
 import requests
 import xml.etree.ElementTree as et
+from xml.dom import minidom
 
-class MocaNexion ():
+class MocaNexion():
     """
     A class to connect to MOCA
     """
@@ -19,11 +20,44 @@ class MocaNexion ():
         self.warehouse = None
         self.locale = None
 
-    def build_xml(self, ):
+    def build_xml(self, user, query, session_key=None, device=None, warehouse=None, locale=None):
         """
         Builds the XML request to send
         """
+        moca_request_tag = et.Element('moca-request')
+        moca_request_tag.set('autocommit', 'True')
 
+        environment_tag = et.SubElement(moca_request_tag, 'environment')
+
+        var_usr_id_tag = et.SubElement(environment_tag, 'var')
+        var_usr_id_tag.set('name', 'USR_ID')
+        var_usr_id_tag.set('value', user)
+
+        if session_key is not None:
+            var_session_key_tag = et.SubElement(environment_tag, 'var')
+            var_session_key_tag.set('name', 'SESSION_KEY')
+            var_session_key_tag.set('value', session_key)
+
+        if device is not None:
+            var_devcod_tag = et.SubElement(environment_tag, 'var')
+            var_devcod_tag.set('name', 'DEVCOD')
+            var_devcod_tag.set('value', device)
+
+        if warehouse is not None:
+            var_wh_id_tag = et.SubElement(environment_tag, 'var')
+            var_wh_id_tag.set('name', 'WH_ID')
+            var_wh_id_tag.set('value', warehouse)
+
+        if locale is not None:
+            var_locale_id = et.SubElement(environment_tag, 'var')
+            var_locale_id.set('name', 'LOCALE_ID')
+            var_locale_id.set('value', locale)
+
+        query_tag = et.SubElement(moca_request_tag, 'query')
+        query_tag.text = query
+        rough_string = et.tostring(moca_request_tag, 'utf-8')
+        reparsed = minidom.parseString(rough_string)
+        return reparsed.toprettyxml(indent="  ", encoding='UTF-8').decode('UTF-8')
 
 
     def parse_response(self, response):
@@ -60,23 +94,23 @@ class MocaNexion ():
             requests.post(conn, data=ping, headers=headers)
 
             check_signon = build_xml(user, "check single signon where usr_id = '" + user + "'")
-            response = et.fromstring(requests.post(conn, data=check_signon, headers=headers)).text)
+            response = et.fromstring(requests.post(conn, data=check_signon, headers=headers).text)
             status = response.find("./status[1]").text
 
-            if status == 0:
+            if status == '0':
                 single_signon = response.find("./moca-results/data/row/field[3]").text
 
                 login_query = "login user where usr_id = '" + user + "' and usr_pswd = '" + password + "'"
 
-                if single_signon == 1:
+                if single_signon == '1':
                     login_query += " and single_signon_flg = '1'"
 
                 login = build_xml(user, login_query, None, device, warehouse, locale)
 
-                response = et.fromstring(requests.post(conn, data=login, headers=headers)).text)
+                response = et.fromstring(requests.post(conn, data=login, headers=headers).text)
                 login_status = response.find("./status[1]").text
 
-                if login_status == 0:
+                if login_status == '0':
                     self.conn = conn
                     self.user = user
                     self.password = password
@@ -93,7 +127,7 @@ class MocaNexion ():
                 raise ValueError('No User Data Found')
 
         except requests.exceptions.RequestException as err:
-            # do something here?
+            print(err)
 
 
     def execute(self, cmd):
@@ -102,11 +136,11 @@ class MocaNexion ():
         """
         #validate user is connected successfully here first
 
-         command = build_xml(self.user, cmd, self.session_key, self.device, self.warehouse, self.locale)
-         response = et.fromstring(requests.post(self.conn, data=command, headers=headers)).text)
+        command = build_xml(self.user, cmd, None, self.session_key, self.device, self.warehouse, self.locale)
+        response = et.fromstring(requests.post(self.conn, data=command, headers=headers).text)
 
-         #try catch in case response is null? no data found? etc.?
+        #try catch in case response is null? no data found? etc.?
 
-         results = parse_response(response)
+        results = parse_response(response)
 
-         return results
+        return results
