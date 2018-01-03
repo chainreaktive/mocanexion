@@ -88,12 +88,12 @@ class MocaNexion():
         Opens the Connection
         """
         headers = {'Content-Type': 'application/moca-xml'}
-        ping = build_xml(user, "ping")
+        ping = self.build_xml(user, "ping")
 
         try:
             requests.post(conn, data=ping, headers=headers)
 
-            check_signon = build_xml(user, "check single signon where usr_id = '" + user + "'")
+            check_signon = self.build_xml(user, "check single signon where usr_id = '" + user + "'")
             response = et.fromstring(requests.post(conn, data=check_signon, headers=headers).text)
             status = response.find("./status[1]").text
 
@@ -105,7 +105,7 @@ class MocaNexion():
                 if single_signon == '1':
                     login_query += " and single_signon_flg = '1'"
 
-                login = build_xml(user, login_query, None, device, warehouse, locale)
+                login = self.build_xml(user, login_query, None, device, warehouse, locale)
 
                 response = et.fromstring(requests.post(conn, data=login, headers=headers).text)
                 login_status = response.find("./status[1]").text
@@ -136,11 +136,11 @@ class MocaNexion():
         """
         #validate user is connected successfully here first
 
-        command = build_xml(self.user, cmd, None, self.session_key, self.device, self.warehouse, self.locale)
+        command = build_xml(self.user, cmd, self.session_key, self.device, self.warehouse, self.locale)
         response = et.fromstring(requests.post(self.conn, data=command, headers=headers).text)
 
         #try catch in case response is null? no data found? etc.?
 
-        results = parse_response(response)
+        results = self.parse_response(response)
 
         return results
