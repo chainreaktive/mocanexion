@@ -87,14 +87,16 @@ class MocaNexion():
         """
         Opens the Connection
         """
+        s = requests.Session()
         headers = {'Content-Type': 'application/moca-xml'}
+
         ping = self.build_xml(user, "ping")
 
         try:
-            requests.post(conn, data=ping, headers=headers)
+            s.post(conn, data=ping, headers=headers)
 
             check_signon = self.build_xml(user, "check single signon where usr_id = '" + user + "'")
-            response = et.fromstring(requests.post(conn, data=check_signon, headers=headers).text)
+            response = et.fromstring(s.post(conn, data=check_signon, headers=headers).text)
 
             status = response.find("./status[1]")
 
@@ -119,7 +121,7 @@ class MocaNexion():
 
                 login = self.build_xml(user, login_query, None, device, warehouse, locale)
 
-                response = et.fromstring(requests.post(conn, data=login, headers=headers).text)
+                response = et.fromstring(s.post(conn, data=login, headers=headers).text)
                 login_status = response.find("./status[1]").text
 
                 if login_status == '0':
@@ -146,16 +148,18 @@ class MocaNexion():
         """
         Executes a command on the server
         """
+        s = requests.Session()
+        headers = {'Content-Type': 'application/moca-xml'}
 
-        command = build_xml(self.user, cmd, self.session_key, self.device, self.warehouse, self.locale)
-        response = et.fromstring(requests.post(self.conn, data=command, headers=headers).text)
+        command = self.build_xml(self.user, cmd, self.session_key, self.device, self.warehouse, self.locale)
+        response = et.fromstring(s.post(self.conn, data=command, headers=headers).text)
 
         status = response.find("./status[1]").text
 
         if status == '523':
             self.connect(self.conn, self.user, self.password, self.device, self.warehouse, self.locale)
-            command = build_xml(self.user, cmd, self.session_key, self.device, self.warehouse, self.locale)
-            response = et.fromstring(requests.post(self.conn, data=command, headers=headers).text)
+            command = self.build_xml(self.user, cmd, self.session_key, self.device, self.warehouse, self.locale)
+            response = et.fromstring(s.post(self.conn, data=command, headers=headers).text)
             status = response.find("./status[1]").text
 
         if status != '0' and status != '510':
