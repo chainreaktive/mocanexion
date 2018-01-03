@@ -95,7 +95,19 @@ class MocaNexion():
 
             check_signon = self.build_xml(user, "check single signon where usr_id = '" + user + "'")
             response = et.fromstring(requests.post(conn, data=check_signon, headers=headers).text)
-            status = response.find("./status[1]").text
+
+            status = response.find("./status[1]")
+
+            if status is None:
+                status = response.find("./head/title[1]")
+
+                if status is not None:
+                    status = status.text
+                else:
+                    status = '404'
+
+            else:
+                status = status.text
 
             if status == '0':
                 single_signon = response.find("./moca-results/data/row/field[3]").text
@@ -134,13 +146,23 @@ class MocaNexion():
         """
         Executes a command on the server
         """
-        #validate user is connected successfully here first
 
         command = build_xml(self.user, cmd, self.session_key, self.device, self.warehouse, self.locale)
         response = et.fromstring(requests.post(self.conn, data=command, headers=headers).text)
 
-        #try catch in case response is null? no data found? etc.?
+        status = response.find("./status[1]").text
 
-        results = self.parse_response(response)
+        if status == '523':
+            self.connect(self.conn, self.user, self.password, self.device, self.warehouse, self.locale)
+            command = build_xml(self.user, cmd, self.session_key, self.device, self.warehouse, self.locale)
+            response = et.fromstring(requests.post(self.conn, data=command, headers=headers).text)
+            status = response.find("./status[1]").text
+
+        if status != '0' and status != '510':
+            message = response.find("./message[1]").text
+            results = "Error " + status + ": " + message
+
+        else:
+            results = self.parse_response(response)
 
         return results
