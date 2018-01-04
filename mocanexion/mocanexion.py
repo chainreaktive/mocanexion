@@ -20,7 +20,7 @@ class MocaNexion():
         self.warehouse = None
         self.locale = None
 
-    def build_xml(self, user, query, session_key=None, device=None, warehouse=None, locale=None):
+    def __build_xml(self, user, query, session_key=None, device=None, warehouse=None, locale=None):
         """
         Builds the XML request to send
         """
@@ -60,7 +60,7 @@ class MocaNexion():
         return reparsed.toprettyxml(indent="  ", encoding='UTF-8').decode('UTF-8')
 
 
-    def parse_response(self, response):
+    def __parse_response(self, response):
         """
         Parses the XML ElementTree response into a dataframe
         """
@@ -90,58 +90,54 @@ class MocaNexion():
         s = requests.Session()
         headers = {'Content-Type': 'application/moca-xml'}
 
-        ping = self.build_xml(user, "ping")
+        ping = self.__build_xml(user, "ping")
 
-        try:
-            s.post(conn, data=ping, headers=headers)
+        s.post(conn, data=ping, headers=headers)
 
-            check_signon = self.build_xml(user, "check single signon where usr_id = '" + user + "'")
-            response = et.fromstring(s.post(conn, data=check_signon, headers=headers).text)
+        check_signon = self.__build_xml(user, "check single signon where usr_id = '" + user + "'")
+        response = et.fromstring(s.post(conn, data=check_signon, headers=headers).text)
 
-            status = response.find("./status[1]")
+        status = response.find("./status[1]")
 
-            if status is None:
-                status = response.find("./head/title[1]")
+        if status is None:
+            status = response.find("./head/title[1]")
 
-                if status is not None:
-                    status = status.text
-                else:
-                    status = '404'
-
-            else:
+            if status is not None:
                 status = status.text
+            else:
+                status = '404'
 
-            if status == '0':
-                single_signon = response.find("./moca-results/data/row/field[3]").text
+        else:
+            status = status.text
 
-                login_query = "login user where usr_id = '" + user + "' and usr_pswd = '" + password + "'"
+        if status == '0':
+            single_signon = response.find("./moca-results/data/row/field[3]").text
 
-                if single_signon == '1':
-                    login_query += " and single_signon_flg = '1'"
+            login_query = "login user where usr_id = '" + user + "' and usr_pswd = '" + password + "'"
 
-                login = self.build_xml(user, login_query, None, device, warehouse, locale)
+            if single_signon == '1':
+                login_query += " and single_signon_flg = '1'"
 
-                response = et.fromstring(s.post(conn, data=login, headers=headers).text)
-                login_status = response.find("./status[1]").text
+            login = self.__build_xml(user, login_query, None, device, warehouse, locale)
 
-                if login_status == '0':
-                    self.conn = conn
-                    self.user = user
-                    self.password = password
-                    self.session_key = response.find("./moca-results/data/row/field[5]").text
-                    self.device = device
-                    self.warehouse = warehouse
-                    self.locale = response.find("./moca-results/data/row/field[2]").text
+            response = et.fromstring(s.post(conn, data=login, headers=headers).text)
+            login_status = response.find("./status[1]").text
 
-                else:
-                    error = response.find("./message[1]").text
-                    raise ValueError(error)
+            if login_status == '0':
+                self.conn = conn
+                self.user = user
+                self.password = password
+                self.session_key = response.find("./moca-results/data/row/field[5]").text
+                self.device = device
+                self.warehouse = warehouse
+                self.locale = response.find("./moca-results/data/row/field[2]").text
 
             else:
-                raise ValueError('No User Data Found')
+                error = response.find("./message[1]").text
+                raise ValueError(error)
 
-        except requests.exceptions.RequestException as err:
-            print(err)
+        else:
+            raise ValueError('No User Data Found')
 
 
     def execute(self, cmd):
@@ -151,22 +147,22 @@ class MocaNexion():
         s = requests.Session()
         headers = {'Content-Type': 'application/moca-xml'}
 
-        command = self.build_xml(self.user, cmd, self.session_key, self.device, self.warehouse, self.locale)
+        command = self.__build_xml(self.user, cmd, self.session_key, self.device, self.warehouse, self.locale)
         response = et.fromstring(s.post(self.conn, data=command, headers=headers).text)
 
         status = response.find("./status[1]").text
 
         if status == '523':
             self.connect(self.conn, self.user, self.password, self.device, self.warehouse, self.locale)
-            command = self.build_xml(self.user, cmd, self.session_key, self.device, self.warehouse, self.locale)
+            command = self.__build_xml(self.user, cmd, self.session_key, self.device, self.warehouse, self.locale)
             response = et.fromstring(s.post(self.conn, data=command, headers=headers).text)
             status = response.find("./status[1]").text
 
         if status != '0' and status != '510':
             message = response.find("./message[1]").text
-            results = "Error " + status + ": " + message
+            results = None
 
         else:
-            results = self.parse_response(response)
+            results = self.__parse_response(response)
 
-        return results
+        return status,results
