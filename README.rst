@@ -23,7 +23,7 @@ Usage:
     
     test
     ----
-    Success!
+    Success
     
     
     
