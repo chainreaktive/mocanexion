@@ -2,3 +2,6 @@
 setup.py
 mocanexion\__init__.py
 mocanexion\mocanexion.py
+
+# Include the license file
+include LICENSE.txt
