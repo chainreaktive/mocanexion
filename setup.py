@@ -1,9 +1,9 @@
-from distutils.core import setup
+from setuptools import setup, find_packages
 
 setup(
     name='mocanexion',
-    version='1.0.2',
-    packages=['mocanexion'],
+    version='1.0.4',
+    packages=find_packages(exclude=['contrib', 'docs', 'tests']),
     url='https://github.com/rnsaway/mocanexion',
     license='The Unlicense',
     author='Nick Saway',
