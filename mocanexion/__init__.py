@@ -134,10 +134,10 @@ class MocaNexion():
 
             else:
                 error = response.find("./message[1]").text
-                raise ValueError(error)
+                raise ConnectionError(error)
 
         else:
-            raise ValueError('No User Data Found')
+            raise ConnectionError('No User Data Found')
 
 
     def execute(self, cmd):
