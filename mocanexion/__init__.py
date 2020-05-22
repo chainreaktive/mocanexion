@@ -2,6 +2,7 @@ import pandas as pd
 import requests
 import xml.etree.ElementTree as et
 from xml.dom import minidom
+import certifi
 
 class MocaNexion():
     """
@@ -90,55 +91,24 @@ class MocaNexion():
         s = requests.Session()
         headers = {'Content-Type': 'application/moca-xml'}
 
-        ping = self.__build_xml(user, "ping")
+        login_query = "login user where usr_id = '" + user + "' and usr_pswd = '" + password + "'"
+        login = self.__build_xml(user, login_query, None, device, warehouse, locale)
 
-        s.post(conn, data=ping, headers=headers)
+        response = et.fromstring(s.post(conn, data=login, headers=headers, verify = certifi.where()).text)
+        login_status = response.find("./status[1]").text
 
-        check_signon = self.__build_xml(user, "check single signon where usr_id = '" + user + "'")
-        response = et.fromstring(s.post(conn, data=check_signon, headers=headers).text)
-
-        status = response.find("./status[1]")
-
-        if status is None:
-            status = response.find("./head/title[1]")
-
-            if status is not None:
-                status = status.text
-            else:
-                status = '404'
+        if login_status == '0':
+            self.conn = conn
+            self.user = user
+            self.password = password
+            self.session_key = response.find("./moca-results/data/row/field[5]").text
+            self.device = device
+            self.warehouse = warehouse
+            self.locale = response.find("./moca-results/data/row/field[2]").text
 
         else:
-            status = status.text
-
-        if status == '0':
-            single_signon = response.find("./moca-results/data/row/field[3]").text
-
-            login_query = "login user where usr_id = '" + user + "' and usr_pswd = '" + password + "'"
-
-            if single_signon == '1':
-                login_query += " and single_signon_flg = '1'"
-
-            login = self.__build_xml(user, login_query, None, device, warehouse, locale)
-
-            response = et.fromstring(s.post(conn, data=login, headers=headers).text)
-            login_status = response.find("./status[1]").text
-
-            if login_status == '0':
-                self.conn = conn
-                self.user = user
-                self.password = password
-                self.session_key = response.find("./moca-results/data/row/field[5]").text
-                self.device = device
-                self.warehouse = warehouse
-                self.locale = response.find("./moca-results/data/row/field[2]").text
-
-            else:
-                error = response.find("./message[1]").text
-                raise ConnectionError(error)
-
-        else:
-            raise ConnectionError('No User Data Found')
-
+            error = response.find("./message[1]").text
+            raise ConnectionError(error)
 
     def execute(self, cmd):
         """
@@ -148,14 +118,14 @@ class MocaNexion():
         headers = {'Content-Type': 'application/moca-xml'}
 
         command = self.__build_xml(self.user, cmd, self.session_key, self.device, self.warehouse, self.locale)
-        response = et.fromstring(s.post(self.conn, data=command, headers=headers).text)
+        response = et.fromstring(s.post(self.conn, data=command, headers=headers,verify = certifi.where()).text)
 
         status = response.find("./status[1]").text
 
         if status == '523':
             self.connect(self.conn, self.user, self.password, self.device, self.warehouse, self.locale)
             command = self.__build_xml(self.user, cmd, self.session_key, self.device, self.warehouse, self.locale)
-            response = et.fromstring(s.post(self.conn, data=command, headers=headers).text)
+            response = et.fromstring(s.post(self.conn, data=command, headers=headers,verify = certifi.where()).text)
             status = response.find("./status[1]").text
 
         if status != '0' and status != '510':
