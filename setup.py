@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='mocanexion',
-    version='1.0.5',
+    version='1.1.0',
     packages=find_packages(exclude=['contrib', 'docs', 'tests']),
     url='https://github.com/chainreaktive/mocanexion',
     license='The Unlicense',
